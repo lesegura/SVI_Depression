@@ -1,0 +1,96 @@
+---
+title: "1 - read_in_ensanut_2018"
+author: "Luis Segura"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+
+options(tinytex.verbose = TRUE, scipen = 999)
+
+mypckgs <- c("tidyverse", "here", "tidymodels", "survey", "srvyr", "haven")
+
+for (package in mypckgs) {
+  library(package, character.only = T)
+}
+
+```
+
+## Importar data
+
+Importando archivos de base de datos salud adultos, residentes y hogares ENSANUT 2018
+
+```{r}
+adultos <- read_sav(here("data/", "CS_ADULTOS.sav")) |>
+  janitor::clean_names()
+
+residentes <- read_sav(here("data/", "CS_RESIDENTES.sav")) |>
+  janitor::clean_names()
+
+```
+
+## Seleccion de variables
+### ENSANUT Salud Adultos
+
+- est_dis: estrato
+- upm_dis: unidad primaria muestreal
+- f_20mas: factor ponderador
+- sexo: 1 = Hombre; 2 = Mujer
+- edad: continua
+- region: 1 = Norte; 2 = Centro; 3 = CDMX; 4 = Sur
+- estrato: 1 = Bajo, Medio bajo, Medio alto, Alto
+- dominio: 1 = Urbano, 2 = Rural
+¿Usa anteojos o lentes de contacto? Incluya el uso de anteojos para leer.
+
+- p14_1: 1 = Si, 2 = No
+
+Cuando usa anteojos o lentes de contacto, ¿tiene dificultad para ver?
+
+- p14_3: 1 = Ninguna dificultad, 2 = cierta dificultad, 3 = Mucha dificultad, 4 = Le resulta imposible ver
+
+Sintomatología depresiva durante la ultima semana. Respuestas posibles 1 = rara vez o nunca (menos de un dia), 2 = pocas veces o alguna vez (1-2 dias), 3 = un numero de veces considerable (3-4 dias), 4 = todo el tiempo o la mayoria del tiempo (5-7 dias). El puntaje de cada indicador va de 0 a 3. Score para sintomas depresivos basados en el CESD-7 con punto de corta de 9 o mas (https://www.saludpublica.mx/index.php/spm/article/view/7209/9386) y 5 o mas para adultos mayores (60 o mas, https://pubmed.ncbi.nlm.nih.gov/25272180/). El 6to indicador debe invertirse. 
+
+- p2_1_1: ¿sentía como si no pudiera quitarse de encima la tristeza?
+- p2_1_2: ¿le costaba concentrarse en lo que estaba haciendo?
+- p2_1_3: ¿se sintió deprimido(a)?
+- p2_1_4: ¿le parecía que todo lo que hacía era un esfuerzo?
+- p2_1_5: ¿no durmió bien?
+- p2_1_6: ¿disfrutó de la vida?
+- p2_1_7: ¿se sintió triste?
+
+```{r}
+adultos <- adultos |>
+  select(upm:numren, edad:diferencia, usa_lentes = p14_1, 
+         disc_visual = p14_3, p2_1_1:p2_1_7)
+```
+
+### ENSANUT residentes
+
+- nivel: 00 = Ninguno, 01 = Preescolar, 02 = Primaria, 03 = Secundaria, 04 = Preparatoria o bachillerato, 
+         05 = Normal basica, 06 = Estudios tecnicos o comerciales con primaria terminada, 
+         07 = Estudios tecnicos o comerciales con secundaria terminada, 
+         08 = Estudios tecnicos o comerciales con preparatoria terminada, 
+         09 = Normal de licenciatura, 
+         10 = Licenciatura o profesional
+         11 = Maestria
+         12 = Doctorado
+- p3_11: 1 = Si habla lengua indigena, 2 = No
+- p3_21: 1 = Si trabajo al menos una hora la semanada pasada, 2 = No
+
+```{r}
+residentes <- residentes |>
+  select(upm:numren, educacion = nivel, l_indigena = p3_11, trabajo = p3_21)
+```
+
+## Uniendo bases de salud y residentes
+
+Uniendo archivo de residentes y adultos usando las variables upm, viv_sel, hogar y numren. Guardamos la base de datos entera como ensanut18_all.RData
+
+```{r}
+ensanut18_all <- adultos |>
+  left_join(residentes, by = c("upm", "viv_sel", "hogar", "numren")) 
+
+save(ensanut18_all, file = here("data/", "ensanut18_all.RData"))
+```
