@@ -1,0 +1,87 @@
+---
+title: "2 - data_wrangling"
+author: "Luis Segura"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+
+options(tinytex.verbose = TRUE, scipen = 999)
+
+mypckgs <- c("tidyverse", "here")
+
+for (package in mypckgs) {
+  library(package, character.only = T)
+}
+
+load(here("data/", "ensanut18_all.RData"))
+```
+
+## Limpieza y recodificacion de variables
+
+```{r}
+ensanut18_4analysis <- ensanut18_all |>
+  labelled::remove_labels()  |>
+  mutate(ses = factor(case_when(estrato == 1 ~ 4, 
+                                estrato == 2 ~ 3, 
+                                estrato == 3 ~ 2, 
+                                estrato == 4 ~ 1), 
+                      labels = c("High", "Middle high", "Middle low", "Low")), 
+         age_cat = factor(ifelse(edad < 40, 1, 
+                                 ifelse(edad > 39 & edad < 60, 2, 3)), 
+                          labels = c("20 - 39 yo", "40 - 59 yo", "60+ yo")), 
+         sexo = factor(sexo, labels = c("Men", "Women")), 
+         urbanicity = factor(dominio, labels = c("Urban", "Rural")),  
+         region = factor(region, labels = c("North", "Center", "Mexico City", "South")),
+         region = fct_relevel(region, "Center"),
+         l_indigena = factor(ifelse(l_indigena == 2, 0, l_indigena), labels = c("No", "Yes")), 
+         usa_lentes = factor(ifelse(usa_lentes == 2, 0, usa_lentes), labels = c("No", "Yes")),
+         disc_visual = factor(disc_visual, labels = c("No difficulty", "Some difficulty", 
+                                                      "A lot of difficulty", "Cannot see at all")),
+         disc_visual_severa = factor(ifelse(disc_visual %in% c("No difficulty", "Some difficulty"), 0, 1), labels = c("No", "Yes")),
+         disc_visual_severa_num = ifelse(disc_visual %in% c("No difficulty", "Some difficulty"), 0, 1),
+         p2_1_1 = p2_1_1 - 1, 
+         p2_1_2 = p2_1_2 - 1, 
+         p2_1_3 = p2_1_3 - 1, 
+         p2_1_4 = p2_1_4 - 1, 
+         p2_1_5 = p2_1_5 - 1, 
+         p2_1_6_r = case_when(p2_1_6 == 4 ~ 3, 
+                              p2_1_6 == 3 ~ 2, 
+                              p2_1_6 == 2 ~ 1, 
+                              p2_1_6 == 1 ~ 0), 
+         p2_1_7 = p2_1_7 - 1, 
+         cesd_score = rowSums(pick(p2_1_1, p2_1_2, p2_1_3, p2_1_4, p2_1_5, p2_1_6_r, p2_1_7)), 
+         cesd = factor(ifelse((cesd_score > 8 & edad < 60) | (cesd_score > 4 & edad > 59), 1, 0), 
+                       labels = c("No depressive symptoms", "Depressive symptoms")),
+          
+          
+         insurance = factor(case_when(p3_10_01 == 1 | p3_10_02 == 1 | p3_10_03 == 1 |
+                                     p3_10_04 == 1 | p3_10_05 == 1 | p3_10_06 == 1 |
+                                     p3_10_07 == 1 | p3_10_08 == 1 | p3_10_09 == 1 |
+                                     p3_10_10 == 1 ~ 1, 
+                                     p3_10_11 == 1 ~ 0, 
+                                     p3_10_99 == 1 ~ NA), 
+                            labels = c("No insurance", "Insurance")), 
+         work_pwk = factor(case_when(trabajo == 2 ~ 1, 
+                                     trabajo == 1 ~ 0), labels = c("Yes", "No")),
+         nivel = as.integer(nivel),
+         education = factor(case_when(nivel < 3 ~ 4, 
+                                      nivel == 3 ~ 3, 
+                                      nivel == 4 ~ 2, 
+                                      nivel > 4 ~ 1), 
+                            labels = c("More than high school education", 
+                                       "High school education","Secondary school", 
+                                       "Elementary education or lower"))) 
+
+ensanut18_4analysis <- ensanut18_4analysis |>
+  select(upm:ent, region, est_dis:f_20mas, age_cat, sexo, urbanicity, education, ses,
+         insurance, l_indigena, work_pwk, usa_lentes, disc_visual, disc_visual_severa, 
+         disc_visual_severa_num, cesd_score, cesd)
+
+
+save(ensanut18_4analysis, file = here("data/", "ensanut18_4analysis.RData"))
+
+
+```
