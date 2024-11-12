@@ -10,7 +10,7 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 
 options(tinytex.verbose = TRUE, scipen = 999)
 
-mypckgs <- c("tidyverse", "here", "tidymodels", "survey", "srvyr", "haven")
+mypckgs <- c("tidyverse", "here", "haven")
 
 for (package in mypckgs) {
   library(package, character.only = T)
@@ -78,10 +78,23 @@ adultos <- adultos |>
          12 = Doctorado
 - p3_11: 1 = Si habla lengua indigena, 2 = No
 - p3_21: 1 = Si trabajo al menos una hora la semanada pasada, 2 = No
+- p3_10_01 = ¿(NOMBRE) tiene derecho o acceso a servicios médicos…1del Seguro Social (IMSS)?
+- p3_19_02 = 2 del ISSSTE?
+- p3_19_03 = 3 del ISSSTE Estatal?
+- p3_19_04 = 4 de Pemex?
+- p3_19_05 = 5 de Defensa
+- p3_19_06 = 6 de Marina?
+- p3_19_07 = 7 del Seguro Popular o Seguro Médico Siglo XXI?
+- p3_19_08 = 8 de IMSS PROSPERA (antes Oportunidades)?
+- p3_19_09 = 9 de un seguro privado de gastos médicos?
+- p3_19_10 = 10 de otra institución?
+- p3_19_11 = 11 ¿No está afiliado o inscrito a servicios médicos?
+- p3_19_99 = 99 No sabe
 
 ```{r}
 residentes <- residentes |>
-  select(upm:numren, educacion = nivel, l_indigena = p3_11, trabajo = p3_21)
+  select(upm:numren, nivel, l_indigena = p3_11, trabajo = p3_21, 
+         p3_10_01:p3_10_11, p3_10_99)
 ```
 
 ## Uniendo bases de salud y residentes
