@@ -1,0 +1,266 @@
+---
+title: "3 - Preliminary analysis for abstract"
+author: "Luis Segura"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+
+options(tinytex.verbose = TRUE, scipen = 999)
+
+mypckgs <- c("tidyverse", "here", "survey", "srvyr")
+
+for (package in mypckgs) {
+  library(package, character.only = T)
+}
+
+load(here("data/", "ensanut18_4analysis.RData"))
+```
+
+```{r}
+### creamos el objeto con el diseno muestral de la ensanut para calcular prevalencias ponderadas
+diseno_ensanut <- ensanut18_4analysis |>
+  as_survey_design(strata = est_dis, 
+                   ids = upm_dis, 
+                   weights = f_20mas, 
+                   nest = T)
+```
+
+# Metodos
+Usamos los datos de la encuesta nacional de salud y nutricion (ENSANUT) 2018 para calcular la prevalencia de discapacidad visual severa y sintomas depresivos en poblacion mexicana estratificando por grupos de edad y, ademas, por grupos de edad y subgrupos vulnerables. 
+
+Para el calculo de las prevalencias incorporamos el diseno muestral y ponderadores de la ENSANUT, la cual es una muestra representativa de la poblacion mexicana. Estimamos la asociacion entre discapacidad visual severa y sintomas depresivos por medio de razones de prevalencias (RP) y sus intervalos de confianza (IC 95%). Para obtener las RP e IC 95%, ajustamos modelos de regresion tipo Poisson con errores estandar de tipo robusto e incorporamos el diseno muestral y ponderadores de la ENSANUT 2018. Ajustamos diferentes modelos estratificados por grupos de edad y, ademas, por grupos de edad y subgrupos vulnerables.
+
+# Resultados
+## Prevalencia de discapacidad visual y sintomas depresivos
+
+En la poblacion mexicana la prevalencia de discapacidad visual es de `r diseno_ensanut |> group_by(disc_visual_severa) |> summarise(prop = survey_mean()) |> filter(disc_visual_severa == "Yes") |> mutate(prop = round(prop * 100, 2)) |> select(prop)`%. La prevalencia de sintomas depresivos es de `r diseno_ensanut |> group_by(cesd) |> summarise(prop = survey_mean()) |> filter(cesd == "Depressive symptoms") |> mutate(prop = round(prop * 100, 2)) |> select(prop)`%.
+
+## Grupos de edad{.tabset}
+### Prevalencias
+```{r}
+table_1 <- diseno_ensanut |>
+  group_by(age_cat, cesd, disc_visual_severa) |>
+  summarise(prop = survey_mean(vartype = "ci")) |>
+  ungroup() |>
+  filter(disc_visual_severa == "Yes") |>
+  mutate(prevalencia = str_glue("{round(prop * 100, 2)}%"), 
+         `IC 95%` = str_glue("({round(prop_low * 100, 2)}; {round(prop_upp * 100, 2)})")) |>
+  select(-c(disc_visual_severa, prop, prop_low, prop_upp))
+
+table_1 |>
+  rename(`grupo edad` = age_cat, 
+         `sintomas depresivos` = cesd) |>
+  DT::datatable(filter = "top")
+```
+
+### Razones de prevalencias
+```{r}
+svyglm(disc_visual_severa_num ~ cesd * age_cat, design = diseno_ensanut, family = poisson) |>
+  emmeans::emmeans(trt.vs.ctrl ~ cesd, by = c("age_cat"), data = ensanut18_4analysis, type = "response") |>
+  pluck("contrasts") |>
+  broom::tidy(conf.int = T) |>
+  mutate(`IC 95%` = str_glue("({round(conf.low, 2)}; {round(conf.high, 2)})"), 
+         `valor p` = round(p.value, 4), 
+         RP = round(ratio, 2)) |>
+  select(`grupo_edad` = age_cat, `sintomas depresivos` = contrast, RP, `IC 95%`, `valor p`) |>
+  DT::datatable(filter = "top")
+  
+```
+
+## Grupos de edad y poblaciones vulnerables
+### Sexo{.tabset}
+#### Prevalencias
+```{r}
+table_2 <- diseno_ensanut |>
+  group_by(sexo, age_cat, cesd, disc_visual_severa) |>
+  summarise(prop = survey_mean(vartype = "ci")) |>
+  ungroup() |>
+  filter(disc_visual_severa == "Yes") |>
+  mutate(prevalencia = str_glue("{round(prop * 100, 2)}%"), 
+         `IC 95%` = str_glue("({round(prop_low * 100, 2)}; {round(prop_upp * 100, 2)})")) |>
+  select(-c(disc_visual_severa, prop, prop_low, prop_upp))
+
+table_2 |>
+  rename(`grupo edad` = age_cat, 
+         `sintomas depresivos` = cesd) |>
+  DT::datatable(filter = "top")
+```
+
+
+#### Razones de prevalencia
+```{r}
+svyglm(disc_visual_severa_num ~ cesd * sexo * age_cat, design = diseno_ensanut, family = poisson) |>
+  emmeans::emmeans(trt.vs.ctrl ~ cesd, by = c("sexo", "age_cat"), data = ensanut18_4analysis, type = "response") |>
+  pluck("contrasts") |>
+  broom::tidy(conf.int = T) |>
+  mutate(`IC 95%` = str_glue("({round(conf.low, 2)}; {round(conf.high, 2)})"), 
+         `valor p` = round(p.value, 4), 
+         RP = round(ratio, 2)) |>
+  select(sexo, `grupo_edad` = age_cat, `sintomas depresivos` = contrast, RP, `IC 95%`, `valor p`) |>
+  DT::datatable(filter = "top")
+```
+
+
+### Estatus socioeconomico{.tabset}
+#### Prevalencias
+```{r}
+table_3 <- diseno_ensanut |>
+  group_by(ses, age_cat, cesd, disc_visual_severa) |>
+  summarise(prop = survey_mean(vartype = "ci")) |>
+  ungroup() |>
+  filter(disc_visual_severa == "Yes") |>
+  mutate(prevalencia = str_glue("{round(prop * 100, 2)}%"), 
+         `IC 95%` = str_glue("({round(prop_low * 100, 2)}; {round(prop_upp * 100, 2)})")) |>
+  select(-c(disc_visual_severa, prop, prop_low, prop_upp))
+
+table_3 |>
+  rename(`grupo edad` = age_cat, 
+         `sintomas depresivos` = cesd, 
+         `estatus socioeconomico` = ses) |>
+  DT::datatable(filter = "top")
+```
+
+
+#### Razones de prevalencia
+```{r}
+svyglm(disc_visual_severa_num ~ cesd * ses * age_cat, design = diseno_ensanut, family = poisson) |>
+  emmeans::emmeans(trt.vs.ctrl ~ cesd, by = c("ses", "age_cat"), data = ensanut18_4analysis, type = "response") |>
+  pluck("contrasts") |>
+  broom::tidy(conf.int = T) |>
+  mutate(`IC 95%` = str_glue("({round(conf.low, 2)}; {round(conf.high, 2)})"), 
+         `valor p` = round(p.value, 4), 
+         RP = round(ratio, 2)) |>
+  select(`estatus socioeconomico` = ses, `grupo_edad` = age_cat, `sintomas depresivos` = contrast, RP, `IC 95%`, `valor p`) |>
+  DT::datatable(filter = "top")
+```
+
+### Lengua indigena{.tabset}
+#### Prevalencias
+```{r}
+table_4 <- diseno_ensanut |>
+  group_by(l_indigena, age_cat, cesd, disc_visual_severa) |>
+  summarise(prop = survey_mean(vartype = "ci")) |>
+  ungroup() |>
+  filter(disc_visual_severa == "Yes") |>
+  mutate(prevalencia = str_glue("{round(prop * 100, 2)}%"), 
+         `IC 95%` = str_glue("({round(prop_low * 100, 2)}; {round(prop_upp * 100, 2)})")) |>
+  select(-c(disc_visual_severa, prop, prop_low, prop_upp))
+
+table_4 |>
+  rename(`grupo edad` = age_cat, 
+         `sintomas depresivos` = cesd, 
+         `habla lengua indigena` = l_indigena) |>
+  DT::datatable(filter = "top")
+```
+
+#### Razones de prevalencia
+```{r}
+svyglm(disc_visual_severa_num ~ cesd * l_indigena * age_cat, design = diseno_ensanut, family = poisson) |>
+  emmeans::emmeans(trt.vs.ctrl ~ cesd, by = c("l_indigena", "age_cat"), data = ensanut18_4analysis, type = "response") |>
+  pluck("contrasts") |>
+  broom::tidy(conf.int = T) |>
+  mutate(`IC 95%` = str_glue("({round(conf.low, 2)}; {round(conf.high, 2)})"), 
+         `valor p` = round(p.value, 4), 
+         RP = round(ratio, 2)) |>
+  select(`habla lengua indigena` = l_indigena, `grupo_edad` = age_cat, `sintomas depresivos` = contrast, RP, `IC 95%`, `valor p`) |>
+  DT::datatable(filter = "top")
+```
+
+### Region{.tabset}
+#### Prevalencias
+```{r}
+table_5 <- diseno_ensanut |>
+  group_by(region, age_cat, cesd, disc_visual_severa) |>
+  summarise(prop = survey_mean(vartype = "ci")) |>
+  ungroup() |>
+  filter(disc_visual_severa == "Yes") |>
+  mutate(prevalencia = str_glue("{round(prop * 100, 2)}%"), 
+         `IC 95%` = str_glue("({round(prop_low * 100, 2)}; {round(prop_upp * 100, 2)})")) |>
+  select(-c(disc_visual_severa, prop, prop_low, prop_upp))
+
+table_5 |>
+  rename(`grupo edad` = age_cat, 
+         `sintomas depresivos` = cesd) |>
+  DT::datatable(filter = "top")
+```
+
+#### Razones de prevalencia
+```{r}
+svyglm(disc_visual_severa_num ~ cesd * region * age_cat, design = diseno_ensanut, family = poisson) |>
+  emmeans::emmeans(trt.vs.ctrl ~ cesd, by = c("region", "age_cat"), data = ensanut18_4analysis, type = "response") |>
+  pluck("contrasts") |>
+  broom::tidy(conf.int = T) |>
+  mutate(`IC 95%` = str_glue("({round(conf.low, 2)}; {round(conf.high, 2)})"), 
+         `valor p` = round(p.value, 4), 
+         RP = round(ratio, 2)) |>
+  select(region, `grupo_edad` = age_cat, `sintomas depresivos` = contrast, RP, `IC 95%`, `valor p`) |>
+  DT::datatable(filter = "top")
+```
+
+### Aseguranza{.tabset}
+#### Prevalencias
+```{r}
+table_6 <- diseno_ensanut |>
+  group_by(insurance, age_cat, cesd, disc_visual_severa) |>
+  summarise(prop = survey_mean(vartype = "ci")) |>
+  ungroup() |>
+  filter(disc_visual_severa == "Yes") |>
+  mutate(prevalencia = str_glue("{round(prop * 100, 2)}%"), 
+         `IC 95%` = str_glue("({round(prop_low * 100, 2)}; {round(prop_upp * 100, 2)})")) |>
+  select(-c(disc_visual_severa, prop, prop_low, prop_upp))
+
+table_6 |>
+  rename(`grupo edad` = age_cat, 
+         `sintomas depresivos` = cesd, 
+         aseguranza = insurance) |>
+  DT::datatable(filter = "top")
+```
+
+#### Razones de prevalencia
+```{r}
+svyglm(disc_visual_severa_num ~ cesd * insurance * age_cat, design = diseno_ensanut, family = poisson) |>
+  emmeans::emmeans(trt.vs.ctrl ~ cesd, by = c("insurance", "age_cat"), data = ensanut18_4analysis, type = "response") |>
+  pluck("contrasts") |>
+  broom::tidy(conf.int = T) |>
+  mutate(`IC 95%` = str_glue("({round(conf.low, 2)}; {round(conf.high, 2)})"), 
+         `valor p` = round(p.value, 4), 
+         RP = round(ratio, 2)) |>
+  select(insurance, `grupo_edad` = age_cat, `sintomas depresivos` = contrast, RP, `IC 95%`, `valor p`) |>
+  DT::datatable(filter = "top")
+```
+
+### Empleo{.tabset}
+#### Prevalencias
+```{r}
+table_7 <- diseno_ensanut |>
+  group_by(work_pwk, age_cat, cesd, disc_visual_severa) |>
+  summarise(prop = survey_mean(vartype = "ci")) |>
+  ungroup() |>
+  filter(disc_visual_severa == "Yes") |>
+  mutate(prevalencia = str_glue("{round(prop * 100, 2)}%"), 
+         `IC 95%` = str_glue("({round(prop_low * 100, 2)}; {round(prop_upp * 100, 2)})")) |>
+  select(-c(disc_visual_severa, prop, prop_low, prop_upp))
+
+table_7 |>
+  rename(`grupo edad` = age_cat, 
+         `sintomas depresivos` = cesd, 
+         `trabaja` = work_pwk) |>
+  DT::datatable(filter = "top")
+```
+
+#### Razones de prevalencia
+```{r}
+svyglm(disc_visual_severa_num ~ cesd * work_pwk * age_cat, design = diseno_ensanut, family = poisson) |>
+  emmeans::emmeans(trt.vs.ctrl ~ cesd, by = c("work_pwk", "age_cat"), data = ensanut18_4analysis, type = "response") |>
+  pluck("contrasts") |>
+  broom::tidy(conf.int = T) |>
+  mutate(`IC 95%` = str_glue("({round(conf.low, 2)}; {round(conf.high, 2)})"), 
+         `valor p` = round(p.value, 4), 
+         RP = round(ratio, 2)) |>
+  select(trabaja = work_pwk, `grupo_edad` = age_cat, `sintomas depresivos` = contrast, RP, `IC 95%`, `valor p`) |>
+  DT::datatable(filter = "top")
+```
+
