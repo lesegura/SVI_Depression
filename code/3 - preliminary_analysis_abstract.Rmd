@@ -2,7 +2,11 @@
 title: "3 - Preliminary analysis for abstract"
 author: "Luis Segura"
 date: "`r Sys.Date()`"
-output: html_document
+output: 
+  github_document: default
+  html_document: default
+always_allow_html: true
+
 ---
 
 ```{r, include=FALSE}
