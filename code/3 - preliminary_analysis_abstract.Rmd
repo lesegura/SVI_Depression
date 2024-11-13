@@ -3,10 +3,9 @@ title: "3 - Preliminary analysis for abstract"
 author: "Luis Segura"
 date: "`r Sys.Date()`"
 output: 
-  github_document: default
-  html_document: default
-always_allow_html: true
-
+  html_document: 
+    toc: true
+    toc_float: true
 ---
 
 ```{r, include=FALSE}
