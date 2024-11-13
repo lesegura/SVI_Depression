@@ -201,7 +201,6 @@ results_7[[2]] |>
   DT::datatable(filter = "top")
 ```
 
-
 ## Educacion{.tabset}
 ### Prevalencias
 ```{r}
