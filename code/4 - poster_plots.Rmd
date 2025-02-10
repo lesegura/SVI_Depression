@@ -1,0 +1,125 @@
+---
+title: "4 - Results for poster CONGISP"
+author: "Luis Segura"
+date: '"`r Sys.Date()`"'
+output: html_document
+---
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+
+options(tinytex.verbose = TRUE, scipen = 999)
+
+mypckgs <- c("tidyverse", "here", "survey", "srvyr", "doParallel", "foreach", "extrafont", "showtext", "patchwork")
+
+for (package in mypckgs) {
+  library(package, character.only = T)
+  
+}
+
+## setup parallel processing
+no_cores <- detectCores() - 1  
+registerDoParallel(cores = no_cores)
+options(cores = no_cores)
+getDoParWorkers()                   
+getDoParName()
+
+loadfonts(device = "win")
+
+font_add(family = "Tahoma", regular = "C:/Windows/Fonts/tahoma.ttf")
+showtext_auto()
+
+load(here("data/", "ensanut18_4analysis.RData"))
+```
+
+```{r}
+ensanut18_4analysis <- ensanut18_4analysis |>
+  mutate(cesd_num = ifelse(cesd == "Depressive symptoms", 1, 
+                           ifelse(cesd == "No depressive symptoms", 0, NA)))
+
+### creamos el objeto con el diseno muestral de la ensanut para calcular prevalencias ponderadas
+diseno_ensanut <- ensanut18_4analysis |>
+  as_survey_design(strata = est_dis, 
+                   ids = upm_dis, 
+                   weights = f_20mas, 
+                   nest = T)
+```
+
+```{r}
+my_fun <- function(x, y, z){
+  
+  my_formula <- as.formula(str_glue("{y} ~ {z} * {x}"))
+  
+  table <- diseno_ensanut |>
+  group_by(!!sym(x), disc_visual_severa, cesd) |>
+  summarise(prop = survey_mean(vartype = "ci")) |>
+  ungroup() |>
+  filter(cesd == "Depressive symptoms") |>
+  mutate(prevalencia = str_glue("{round(prop * 100, 2)}%"), 
+         `IC 95%` = str_glue("({round(prop_low * 100, 2)}; {round(prop_upp * 100, 2)})")) |>
+  select(-c(cesd, prop, prop_low, prop_upp))
+  
+  fit <- svyglm(my_formula, design = diseno_ensanut, family = quasipoisson) 
+  
+  fit_emm <- fit |>
+  emmeans::emmeans(trt.vs.ctrl ~ disc_visual_severa, by = c(x), data = ensanut18_4analysis, type = "response") 
+  
+  contrasts_emm <- fit_emm |>
+  pluck("contrasts") |>
+  broom::tidy(conf.int = T) |>
+  mutate(var = x) |>
+  select(var, level = !!sym(x), contrast, PR = ratio, conf.low, 
+           conf.high, `p value` = ends_with("p.value"))
+  
+  my_list <- list(table = table, betas = contrasts_emm)
+  
+  return(my_list)
+  
+}
+
+```
+
+```{r}
+my_vars <- names(ensanut18_4analysis)[c(13, 6, 16, 18, 8, 17, 19, 15)]
+
+results_list <- foreach(i = my_vars, 
+                        .packages = c("tidyverse", "survey", "srvyr", "emmeans")) %dopar% {
+  
+  my_fun(i, "cesd_num", "disc_visual_severa")
+  
+}
+
+```
+
+```{r}
+betas_plot <- map(results_list, "betas") |>
+  bind_rows() |>
+    mutate(contrast = str_trim(contrast, side = "both"))
+
+
+plot_poster <- betas_plot |>
+  mutate(level =  factor(level),  
+         orden = seq(1, length(var), 1),
+         color = factor(c(rep(1, 3), rep(2, 2), rep(3, 3), rep(4, 2), 
+                   rep(5, 4), rep(6, 2), rep(7, 2), rep(8, 4)), 
+                   labels = c("Age group", "Sex", "SES", "Indigenous", 
+                              "Region", "Insurance", "PW employment", "Education"))) |>
+  ggplot(aes(y = reorder(ordered(interaction(level, color, sep = "!")), desc(orden)), 
+             x = PR, xmin = conf.low, xmax = conf.high, color = color)) +
+  geom_point(size = 5, shape = "diamond") +
+  geom_errorbarh(height = 0.3) + 
+  scale_x_continuous(limits = c(1, 5.0), breaks = seq(1.0, 5.0, 1.0), name = "Prevalence Ratio (95% CI)")  +
+  scale_y_discrete(guide = ggh4x::guide_axis_nested(delim = "!")) +
+  geom_vline(xintercept = 1, color = "black", linetype = "solid", alpha = 0.5) +
+  ggthemes::theme_calc() +
+  theme(legend.position = "none", 
+        text = element_text(size = 30, family = "Tahoma"), 
+        plot.margin = margin(20, 20, 20, 20)) +
+  labs(y = "",
+       title = "") 
+
+# ggsave(here("results/", "forestplot_poster.jpeg"), plot = plot_poster,
+#        width = 24, height = 12, units = "in", dpi = 900)
+
+```
+
