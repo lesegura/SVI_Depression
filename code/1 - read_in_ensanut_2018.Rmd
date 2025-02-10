@@ -79,22 +79,41 @@ adultos <- adultos |>
 - p3_11: 1 = Si habla lengua indigena, 2 = No
 - p3_21: 1 = Si trabajo al menos una hora la semanada pasada, 2 = No
 - p3_10_01 = ¿(NOMBRE) tiene derecho o acceso a servicios médicos…1del Seguro Social (IMSS)?
-- p3_19_02 = 2 del ISSSTE?
-- p3_19_03 = 3 del ISSSTE Estatal?
-- p3_19_04 = 4 de Pemex?
-- p3_19_05 = 5 de Defensa
-- p3_19_06 = 6 de Marina?
-- p3_19_07 = 7 del Seguro Popular o Seguro Médico Siglo XXI?
-- p3_19_08 = 8 de IMSS PROSPERA (antes Oportunidades)?
-- p3_19_09 = 9 de un seguro privado de gastos médicos?
-- p3_19_10 = 10 de otra institución?
-- p3_19_11 = 11 ¿No está afiliado o inscrito a servicios médicos?
-- p3_19_99 = 99 No sabe
+- p3_10_01: ¿(NOMBRE) tiene derecho o acceso a servicios médicos…1del Seguro Social (IMSS)? 0 = No, 1 = Si
+- p3_10_02: ... ISSSTE?
+- p3_10_03: ... ISSSTE Estatal?
+- p3_10_04: ... Pemex?
+- p3_10_05: ... Defensa?
+- p3_10_06: ... Marina?
+- p3_10_07: ... Seguro Popular o Seguro Medico Siglo XXI?
+- p3_10_08: ... IMSS Prospera?
+- p3_10_09: ... seguro privado de gastos medicos?
+- p3_10_10: ... de otra institucion?
+- p3_10_11: ... no esta afiliado o inscrito a servicios medicos?
+- p3_10_99: ... no sabe
+- p3_10_opc1: ... primera o unica opcion
+- p3_10_opc2: ... segunda opcion elegida
 
 ```{r}
 residentes <- residentes |>
   select(upm:numren, nivel, l_indigena = p3_11, trabajo = p3_21, 
-         p3_10_01:p3_10_11, p3_10_99)
+         p3_10_01:p3_10_11, p3_10_99, p3_10_opc1, p3_10_opc2)
+```
+
+### Importando base de datos INSP con variable SES
+
+Importando el indicador de SES creado por el INSP
+- llave
+- indice1
+- nsef: 1 = bajo; 2 = medio; 3 = alto
+- nse5f: quintiles de dudosa procedencia
+
+```{r}
+ses_insp <- read_dta(here("data/", "ENSANUT2018_NSE.dta")) |>
+  janitor::clean_names() |>
+  mutate(upm = str_pad(upm, width = 5, pad = "0"), 
+         viv_sel = str_pad(viv_sel, width = 2, pad = "0"))
+
 ```
 
 ## Uniendo bases de salud y residentes
@@ -103,7 +122,8 @@ Uniendo archivo de residentes y adultos usando las variables upm, viv_sel, hogar
 
 ```{r}
 ensanut18_all <- adultos |>
-  left_join(residentes, by = c("upm", "viv_sel", "hogar", "numren")) 
+  left_join(residentes, by = c("upm", "viv_sel", "hogar", "numren")) |>
+  left_join(ses_insp, by = c("upm", "viv_sel", "hogar"))
 
 save(ensanut18_all, file = here("data/", "ensanut18_all.RData"))
 ```
