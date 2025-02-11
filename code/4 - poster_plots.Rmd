@@ -91,35 +91,56 @@ results_list <- foreach(i = my_vars,
 
 ```
 
+
+```{r}
+overall_pr <- svyglm(cesd_num ~ disc_visual_severa, design = diseno_ensanut, family = poisson) |> 
+  emmeans::emmeans(trt.vs.ctrl ~ disc_visual_severa, data = ensanut18_4analysis, type = "response") |> 
+  pluck("contrasts") |> 
+  broom::tidy(conf.int = T) |>
+  mutate(var = "Overall", 
+         level = "SVI (Yes/No)") |> 
+  select(var, level, contrast, PR = ratio, conf.low, conf.high)
+```
+
+
 ```{r}
 betas_plot <- map(results_list, "betas") |>
   bind_rows() |>
     mutate(contrast = str_trim(contrast, side = "both"))
 
+betas_plot <- overall_pr |>
+  bind_rows(betas_plot)
 
 plot_poster <- betas_plot |>
   mutate(level =  factor(level),  
          orden = seq(1, length(var), 1),
-         color = factor(c(rep(1, 3), rep(2, 2), rep(3, 3), rep(4, 2), 
-                   rep(5, 4), rep(6, 2), rep(7, 2), rep(8, 4)), 
-                   labels = c("Age group", "Sex", "SES", "Indigenous", 
+         color = factor(c(1, rep(2, 3), rep(3, 2), rep(4, 3), rep(5, 2), 
+                   rep(6, 4), rep(7, 2), rep(8, 2), rep(9, 4)), 
+                   labels = c("Overall", "Age group", "Sex", "SES", "Indigenous", 
                               "Region", "Insurance", "PW employment", "Education"))) |>
   ggplot(aes(y = reorder(ordered(interaction(level, color, sep = "!")), desc(orden)), 
              x = PR, xmin = conf.low, xmax = conf.high, color = color)) +
-  geom_point(size = 5, shape = "diamond") +
+  geom_point(size = 6, shape = "diamond") +
   geom_errorbarh(height = 0.3) + 
   scale_x_continuous(limits = c(1, 5.0), breaks = seq(1.0, 5.0, 1.0), name = "Prevalence Ratio (95% CI)")  +
   scale_y_discrete(guide = ggh4x::guide_axis_nested(delim = "!")) +
   geom_vline(xintercept = 1, color = "black", linetype = "solid", alpha = 0.5) +
   ggthemes::theme_calc() +
   theme(legend.position = "none", 
-        text = element_text(size = 30, family = "Tahoma"), 
-        plot.margin = margin(20, 20, 20, 20)) +
+        text = element_text(size = 20, family = "Tahoma"), 
+        plot.margin = margin(20, 20, 20, 20), 
+        panel.background = element_rect(fill = "transparent", color = NA), 
+        plot.background = element_rect(fill = "transparent", color = NA)) +
   labs(y = "",
        title = "") 
 
-# ggsave(here("results/", "forestplot_poster.jpeg"), plot = plot_poster,
-#        width = 24, height = 12, units = "in", dpi = 900)
+figure_1 <- plot_poster + plot_annotation(title = "Figure 1. Prevalence ratios of depressive symptomatology among those with and without severe visual impairment by sociodemographic groups.", 
+                                   theme = theme(plot.title = element_text(hjust = 0, size = 24, face = "bold", family = "Tahoma"),
+      plot.margin = margin(5, 20, 20, 5)))
+
+
+ggsave(here("results/", "forestplot_poster.pdf"), plot = figure_1, device = cairo_pdf, 
+       width = 26, height = 14, units = "in", dpi = 1800)
 
 ```
 
