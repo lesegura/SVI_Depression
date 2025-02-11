@@ -2,10 +2,12 @@
 title: "5 - table 1 poster"
 author: "Luis Segura"
 date: "`r Sys.Date()`"
-output: 
-  word_document: 
+output:
+  word_document:
     reference_docx: word_template.docx
-editor_options: 
+  html_document:
+    df_print: paged
+editor_options:
   chunk_output_type: console
 ---
 
@@ -104,18 +106,40 @@ tab_list <- foreach(i = my_vars,
 ```{r}
 tab_list |>
   bind_rows() |>
+  mutate(term = case_when(level == "SVI (Yes/No)" ~ "Discapacidad visual severa (Si/No)", 
+                          level == "20 / 39 yo" ~ "20 a 39 años", 
+                          level == "40 / 59 yo" ~ "40 a 59 años", 
+                          level == "60+ yo" ~ "60+ años", 
+                          level == "Men" ~ "Hombre", 
+                          level == "Women" ~ "Mujer", 
+                          level == "High" ~ "Alto", 
+                          level == "Middle" ~ "Medio", 
+                          level == "Low" ~ "Bajo", 
+                          level == "No" ~ "No", 
+                          level == "Yes" ~ "Si", 
+                          level == "Center" ~ "Centro", 
+                          level == "North" ~ "Norte", 
+                          level == "Mexico City" ~ "Ciudad de México", 
+                          level == "South" ~ "Sur", 
+                          level == "No insurance" ~ "Sin servicio médico", 
+                          level == "Insurance" ~ "Con servicio médico", 
+                          level == "More than high school education" ~ "Mayor a preparatoria", 
+                          level == "High school education" ~ "Preparatoria", 
+                          level == "Secondary school" ~ "Secundaria", 
+                          level == "Elementary education or lower" ~ "Primaria o menor")) |>
+  select(var, term, everything(), -level) |>
   mutate(var = factor(var), 
-         level = factor(level)) |>
-  mutate(var = recode(var, cesd = "Depressive symptoms", 
-                      disc_visual_severa = "Severe vision impairment",
-                      age_cat = "Age group", 
-                      sexo = "Gender", 
-                      ses = "Socioeconomic status",
-                      l_indigena = "Speaks indigenous lenguage", 
-                      region = "Region",
-                      insurance = "Insurance", 
-                      work_pwk = "Past-week employment",
-                      education = "Education")) |>
+         term = factor(term)) |>
+  mutate(var = recode(var, cesd = "Síntomas depresivos", 
+                      disc_visual_severa = "Discapacidad visual severa",
+                      age_cat = "Grupo de edad", 
+                      sexo = "Sexo", 
+                      ses = "Nivel Socioeconómico",
+                      l_indigena = "Lengua Indigena", 
+                      region = "Región",
+                      insurance = "Acceso a servicios médicos", 
+                      work_pwk = "Empleado",
+                      education = "Educación")) |>
   flextable::as_grouped_data(groups = c("var")) |>
   flextable::as_flextable(max_row = Inf, show_coltype = F, spread_first_col = TRUE, hide_grouplabel = TRUE, groups_to = "titles") |>
   flextable::style(i = ~!is.na(var),
@@ -127,7 +151,7 @@ tab_list |>
                                              `w % Without SVD` = "w %", 
                                              `n With SVD` = "N", 
                                              `w % With SVD` = "w %")) |>
-  flextable::add_header_row(values = c("", "Sample", "No depressive symptoms", "Depressive symptoms"), 
+  flextable::add_header_row(values = c("", "Total", "Sin sintomas depresivos", "Con síntomas depresivos"), 
                             colwidths = c(1, 2, 2, 2), 
                             top = T) |>
   flextable::font(fontname = "Tahoma") |>
