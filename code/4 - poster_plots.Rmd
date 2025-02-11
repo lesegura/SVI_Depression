@@ -139,8 +139,8 @@ plot_poster <- betas_plot |>
          orden = seq(1, length(var), 1),
          color = factor(c(1, rep(2, 3), rep(3, 2), rep(4, 3), rep(5, 2), 
                    rep(6, 4), rep(7, 2), rep(8, 2), rep(9, 4)), 
-                   labels = c("Total", "Grupo etario", "Sexo", "Estatus socioeconómico", "Lengua indigena", 
-                              "Región", "Aseguranza", "Empleado", "Educación"))) |>
+                   labels = c("Total", "Grupo de edad", "Sexo", "Nivel socioeconómico", "Lengua indigena", 
+                              "Región", "Acceso a servicios médicos", "Empleado", "Educación"))) |>
   ggplot(aes(y = reorder(ordered(interaction(term, color, sep = "!")), desc(orden)), 
              x = PR, xmin = conf.low, xmax = conf.high, color = color)) +
   geom_point(size = 6, shape = "diamond") +
@@ -158,7 +158,7 @@ plot_poster <- betas_plot |>
   labs(y = "",
        title = "") 
 
-figure_1 <- plot_poster + plot_annotation(title = "Figura 1. Razones de prevalencia de síntomas depresivos comparando aquellos con y sin discapacidad visual severa por grupos sociodemográficos.\nENSANUT 2018.", 
+figure_1 <- plot_poster + plot_annotation(title = "Figura 1. Razones de prevalencia de síntomas depresivos comparando aquellos con y sin discapacidad visual severa en la población total y por grupos \nsociodemográficos en adultos Mexicanos. ENSANUT 2018.", 
                                    theme = theme(plot.title = element_text(hjust = 0, size = 24, face = "bold", family = "Tahoma"),
       plot.margin = margin(5, 20, 20, 5)))
 
