@@ -111,18 +111,41 @@ betas_plot <- map(results_list, "betas") |>
 betas_plot <- overall_pr |>
   bind_rows(betas_plot)
 
+
+
 plot_poster <- betas_plot |>
-  mutate(level =  factor(level),  
+  mutate(term = case_when(level == "SVI (Yes/No)" ~ "DVS (Si/No)", 
+                          level == "20 / 39 yo" ~ "20 a 39 años", 
+                          level == "40 / 59 yo" ~ "40 a 59 años", 
+                          level == "60+ yo" ~ "60+ años", 
+                          level == "Men" ~ "Hombre", 
+                          level == "Women" ~ "Mujer", 
+                          level == "High" ~ "Alto", 
+                          level == "Middle" ~ "Medio", 
+                          level == "Low" ~ "Bajo", 
+                          level == "No" ~ "No", 
+                          level == "Yes" ~ "Si", 
+                          level == "Center" ~ "Centro", 
+                          level == "North" ~ "Norte", 
+                          level == "Mexico City" ~ "Ciudad de México", 
+                          level == "South" ~ "Sur", 
+                          level == "No insurance" ~ "Sin servicio médico", 
+                          level == "Insurance" ~ "Con servicio médico", 
+                          level == "More than high school education" ~ "Mayor a preparatoria", 
+                          level == "High school education" ~ "Preparatoria", 
+                          level == "Secondary school" ~ "Secundaria", 
+                          level == "Elementary education or lower" ~ "Primaria o menor"),
+         term = factor(term), 
          orden = seq(1, length(var), 1),
          color = factor(c(1, rep(2, 3), rep(3, 2), rep(4, 3), rep(5, 2), 
                    rep(6, 4), rep(7, 2), rep(8, 2), rep(9, 4)), 
-                   labels = c("Overall", "Age group", "Sex", "SES", "Indigenous", 
-                              "Region", "Insurance", "PW employment", "Education"))) |>
-  ggplot(aes(y = reorder(ordered(interaction(level, color, sep = "!")), desc(orden)), 
+                   labels = c("Total", "Grupo etario", "Sexo", "Estatus socioeconómico", "Lengua indigena", 
+                              "Región", "Aseguranza", "Empleado", "Educación"))) |>
+  ggplot(aes(y = reorder(ordered(interaction(term, color, sep = "!")), desc(orden)), 
              x = PR, xmin = conf.low, xmax = conf.high, color = color)) +
   geom_point(size = 6, shape = "diamond") +
   geom_errorbarh(height = 0.3) + 
-  scale_x_continuous(limits = c(1, 5.0), breaks = seq(1.0, 5.0, 1.0), name = "Prevalence Ratio (95% CI)")  +
+  scale_x_continuous(limits = c(1, 5.0), breaks = seq(1.0, 5.0, 1.0), name = "Razones de Prevalencia (IC 95%)")  +
   scale_y_discrete(guide = ggh4x::guide_axis_nested(delim = "!")) +
   geom_vline(xintercept = 1, color = "black", linetype = "solid", alpha = 0.5) +
   ggthemes::theme_calc() +
@@ -135,7 +158,7 @@ plot_poster <- betas_plot |>
   labs(y = "",
        title = "") 
 
-figure_1 <- plot_poster + plot_annotation(title = "Figure 1. Prevalence ratios of depressive symptomatology among those with and without severe visual impairment by sociodemographic groups.", 
+figure_1 <- plot_poster + plot_annotation(title = "Figura 1. Razones de prevalencia de síntomas depresivos comparando aquellos con y sin discapacidad visual severa por grupos sociodemográficos.\nENSANUT 2018.", 
                                    theme = theme(plot.title = element_text(hjust = 0, size = 24, face = "bold", family = "Tahoma"),
       plot.margin = margin(5, 20, 20, 5)))
 
