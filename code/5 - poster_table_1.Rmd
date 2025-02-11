@@ -1,0 +1,136 @@
+---
+title: "5 - table 1 poster"
+author: "Luis Segura"
+date: "`r Sys.Date()`"
+output: 
+  word_document: 
+    reference_docx: word_template.docx
+editor_options: 
+  chunk_output_type: console
+---
+
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+
+options(tinytex.verbose = TRUE, scipen = 999)
+
+mypckgs <- c("tidyverse", "here", "survey", "srvyr", "doParallel", "foreach", "extrafont", "showtext")
+
+for (package in mypckgs) {
+  library(package, character.only = T)
+}
+
+## setup parallel processing
+no_cores <- detectCores() - 1  
+registerDoParallel(cores = no_cores)
+options(cores = no_cores)
+getDoParWorkers()                   
+getDoParName()
+
+
+loadfonts(device = "win")
+
+font_add(family = "Tahoma", regular = "C:/Windows/Fonts/tahoma.ttf")
+showtext_auto()
+
+load(here("data/", "ensanut18_4analysis.RData"))
+```
+
+```{r}
+ensanut18_4analysis <- ensanut18_4analysis |>
+  mutate(cesd_num = ifelse(cesd == "Depressive symptoms", 1, 
+                           ifelse(cesd == "No depressive symptoms", 0, NA)))
+
+### creamos el objeto con el diseno muestral de la ensanut para calcular prevalencias ponderadas
+diseno_ensanut <- ensanut18_4analysis |>
+  as_survey_design(strata = est_dis, 
+                   ids = upm_dis, 
+                   weights = f_20mas, 
+                   nest = T)
+```
+
+### Tabla 1. Distribución de sintomas depresivos, discapacidad visual severa y caracteristicas sociodemograficas
+
+```{r}
+my_vars <- names(ensanut18_4analysis)[c(25, 22, 13, 6, 16, 18, 8, 17, 19, 15)]
+
+### Creamos una función para calcular las n y prevalencias de las diferentes covariables.
+fun_desc <- function(x) {
+  
+  muestra_tot <- diseno_ensanut |>
+    group_by(!!sym(x)) |>
+    summarize(n = n(), 
+              prop = survey_prop(vartype = c("ci"), proportion = T)) |>
+    mutate(var = x, 
+           `w %` = str_glue("{round(prop * 100, 2)}%")) |>
+    select(var, level = !!sym(x), Overall = n, `w %`)
+  
+  if(x == "cesd") return(muestra_tot)
+  
+  muestra_estrat <- diseno_ensanut |>
+    group_by(!!sym(x), cesd) |>
+    summarize(n = n(), 
+              prop = survey_prop(vartype = c("ci"), proportion = T)) |>
+    select(!c(prop_low, prop_upp)) |>
+    pivot_wider(names_from = "cesd", values_from = c("n", "prop")) |>
+    mutate(var = x, 
+           `n No depressive symptoms` = `n_No depressive symptoms`,
+           `n Depressive symptoms` = `n_Depressive symptoms`,
+           `w % No depressive symptoms` = str_glue("{round(`prop_No depressive symptoms` * 100, 2)}%"), 
+           `w % Depressive symptoms` = str_glue("{round(`prop_Depressive symptoms` * 100, 2)}%")) |>
+    select(var, level = !!sym(x), `n No depressive symptoms`, `w % No depressive symptoms`, 
+           `n Depressive symptoms`, `w % Depressive symptoms`)
+  
+  tab <- muestra_tot |> 
+    left_join(muestra_estrat, by = c("var", "level")) 
+  
+  return(tab)
+    
+}
+
+```
+
+```{r}
+
+tab_list <- foreach(i = my_vars, 
+                    .packages = c("tidyverse", "survey", "srvyr")) %dopar% {
+  fun_desc(i)
+}
+
+```
+
+
+```{r}
+tab_list |>
+  bind_rows() |>
+  mutate(var = factor(var), 
+         level = factor(level)) |>
+  mutate(var = recode(var, cesd = "Depressive symptoms", 
+                      disc_visual_severa = "Severe vision impairment",
+                      age_cat = "Age group", 
+                      sexo = "Gender", 
+                      ses = "Socioeconomic status",
+                      l_indigena = "Speaks indigenous lenguage", 
+                      region = "Region",
+                      insurance = "Insurance", 
+                      work_pwk = "Past-week employment",
+                      education = "Education")) |>
+  flextable::as_grouped_data(groups = c("var")) |>
+  flextable::as_flextable(max_row = Inf, show_coltype = F, spread_first_col = TRUE, hide_grouplabel = TRUE, groups_to = "titles") |>
+  flextable::style(i = ~!is.na(var),
+        pr_p = officer::fp_par(text.align = "left", padding = 5, line_spacing = 1.5)) |>
+  flextable::prepend_chunks(i = ~is.na(var), j = 1, flextable::as_chunk("\t")) |>
+  flextable::set_header_labels(values = list(level = "", 
+                                             Overall = "N", 
+                                             `n Without SVD` = "N", 
+                                             `w % Without SVD` = "w %", 
+                                             `n With SVD` = "N", 
+                                             `w % With SVD` = "w %")) |>
+  flextable::add_header_row(values = c("", "Sample", "No depressive symptoms", "Depressive symptoms"), 
+                            colwidths = c(1, 2, 2, 2), 
+                            top = T) |>
+  flextable::font(fontname = "Tahoma") |>
+  flextable::autofit()
+```
+
