@@ -143,28 +143,29 @@ plot_poster <- betas_plot |>
                               "Región", "Acceso a servicios médicos", "Empleado", "Educación"))) |>
   ggplot(aes(y = reorder(ordered(interaction(term, color, sep = "!")), desc(orden)), 
              x = PR, xmin = conf.low, xmax = conf.high, color = color)) +
-  geom_point(size = 6, shape = "diamond") +
+  geom_point(size = 8, shape = "diamond") +
   geom_errorbarh(height = 0.3) + 
   scale_x_continuous(limits = c(1, 5.0), breaks = seq(1.0, 5.0, 1.0), name = "Razones de Prevalencia (IC 95%)")  +
   scale_y_discrete(guide = ggh4x::guide_axis_nested(delim = "!")) +
   geom_vline(xintercept = 1, color = "black", linetype = "solid", alpha = 0.5) +
   ggthemes::theme_calc() +
   theme(legend.position = "none", 
-        text = element_text(size = 20, family = "Tahoma"), 
+        text = element_text(size = 26, family = "Tahoma"), 
         plot.margin = margin(20, 20, 20, 20), 
         panel.background = element_rect(fill = "transparent", color = NA), 
         plot.background = element_rect(fill = "transparent", color = NA), 
-        axis.text.y = element_text(margin = margin(l = 4, r = 4, unit = "pt"))) +
+        axis.text.y = element_text(margin = margin(l = 4, r = 4, unit = "pt")), 
+        ggh4x.axis.nesttext.y = element_text(size = 24, face = "bold")) +
   labs(y = "",
        title = "") 
 
-figure_1 <- plot_poster + plot_annotation(title = "Figura 1. Razones de prevalencia de síntomas depresivos comparando aquellos con y sin discapacidad visual severa en la población total y por grupos \nsociodemográficos en adultos Mexicanos. ENSANUT 2018.", 
-                                   theme = theme(plot.title = element_text(hjust = 0, size = 24, face = "bold", family = "Tahoma"),
+figure_1 <- plot_poster + plot_annotation(title = "Figura 1. Razones de prevalencia de síntomas depresivos comparando aquellos con y sin discapacidad visual severa en la población total \ny por grupos sociodemográficos en adultos Mexicanos. ENSANUT 2018.", 
+                                   theme = theme(plot.title = element_text(hjust = 0, size = 28, face = "bold", family = "Tahoma"),
       plot.margin = margin(5, 20, 20, 5)))
 
 
 ggsave(here("results/", "forestplot_poster.pdf"), plot = figure_1, device = cairo_pdf, 
-       width = 24, height = 14, units = "in", dpi = 1800)
+       width = 24, height = 16, units = "in", dpi = 1800)
 
 ```
 
