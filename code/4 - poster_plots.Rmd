@@ -114,7 +114,7 @@ betas_plot <- overall_pr |>
 
 
 plot_poster <- betas_plot |>
-  mutate(term = case_when(level == "SVI (Yes/No)" ~ "Discapacidad visual severa (Si/No)", 
+  mutate(term = case_when(level == "SVI (Yes/No)" ~ "Discapacidad visual \nsevera (Si/No) \n", 
                           level == "20 / 39 yo" ~ "20 a 39 años", 
                           level == "40 / 59 yo" ~ "40 a 59 años", 
                           level == "60+ yo" ~ "60+ años", 
