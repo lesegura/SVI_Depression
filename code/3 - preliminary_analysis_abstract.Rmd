@@ -23,10 +23,6 @@ load(here("data/", "ensanut18_4analysis.RData"))
 ```
 
 ```{r}
-ensanut18_4analysis <- ensanut18_4analysis |>
-  mutate(cesd_num = ifelse(cesd == "Depressive symptoms", 1, 
-                           ifelse(cesd == "No depressive symptoms", 0, NA)))
-
 ### creamos el objeto con el diseno muestral de la ensanut para calcular prevalencias ponderadas
 diseno_ensanut <- ensanut18_4analysis |>
   as_survey_design(strata = est_dis, 

@@ -63,7 +63,7 @@ Sintomatología depresiva durante la ultima semana. Respuestas posibles 1 = rara
 ```{r}
 adultos <- adultos |>
   select(upm:numren, edad:diferencia, usa_lentes = p14_1, 
-         disc_visual = p14_3, p2_1_1:p2_1_7)
+         disc_visual = p14_3, p2_1_1:p2_1_7, p12_8, p12_8_1, p12_7, p12_7_1)
 ```
 
 ### ENSANUT residentes

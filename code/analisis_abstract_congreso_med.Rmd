@@ -1,0 +1,171 @@
+---
+title: "analisis_abstract_congreso_med"
+author: "Luis Segura"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+options(tinytex.verbose = TRUE, scipen = 999)
+
+mypckgs <- c("tidyverse", "here", "survey", "srvyr")
+
+for (package in mypckgs) {
+  library(package, character.only = T)
+}
+
+```
+
+```{r}
+
+load(here("data/", "ensanut18_4analysis.RData"))
+
+```
+
+
+```{r}
+### creamos el objeto con el diseno muestral de la ensanut para calcular prevalencias ponderadas
+diseno_ensanut <- ensanut18_4analysis |>
+  as_survey_design(strata = est_dis, 
+                   ids = upm_dis, 
+                   weights = f_20mas, 
+                   nest = T)
+```
+
+## Resultados abstract
+
+### Ideacion suicida
+Prevalencia de ideacion
+```{r}
+diseno_ensanut |>
+  group_by(suicide_ideation) |>
+  summarise(prop = survey_mean(vartype = c("ci"))) |>
+  mutate(prop = prop * 100, 
+         prop_low = prop_low * 100, 
+         prop_upp = prop_upp * 100) |>
+  knitr::kable()
+```
+
+Prevalencia de discapacidad visual
+```{r}
+diseno_ensanut |>
+  group_by(disc_visual_severa) |>
+  summarise(prop = survey_mean(vartype = c("ci"))) |>
+  mutate(prop = prop * 100, 
+         prop_low = prop_low * 100, 
+         prop_upp = prop_upp * 100) |>
+  knitr::kable()
+```
+
+Prevalencia de ideacion suicida por discapacidad visual
+```{r}
+diseno_ensanut |>
+  group_by(disc_visual_severa, suicide_ideation) |>
+  summarise(prop = survey_mean(vartype = c("ci"))) |>
+  mutate(prop = prop * 100, 
+         prop_low = prop_low * 100, 
+         prop_upp = prop_upp * 100) |>
+  knitr::kable()
+```
+
+Razon de prevalencia cruda de ideacion suicida | discapacidad visual severa
+```{r}
+svyglm(suicide_ideation_num ~ disc_visual_severa, 
+       design = diseno_ensanut, family = "quasipoisson") |>
+  broom::tidy(conf.int = T, exponentiate = T) |>
+  select(!c(std.error, statistic)) |>
+  knitr::kable()
+```
+
+Razon de prevalencia ajustada por edad (Grupos), sexo, ses, y educacion
+```{r}
+svyglm(suicide_ideation_num ~ disc_visual_severa + age_cat + sexo + education + ses, 
+       design = diseno_ensanut, family = "quasipoisson") |>
+  broom::tidy(conf.int = T, exponentiate = T) |>
+  select(!c(std.error, statistic)) |>
+  knitr::kable()
+```
+
+### Intento suicida no temporalidad
+Prevalencia de intento suicida
+```{r}
+diseno_ensanut |>
+  group_by(suicide_int) |>
+  summarise(prop = survey_mean(vartype = c("ci"))) |>
+  mutate(prop = prop * 100, 
+         prop_low = prop_low * 100, 
+         prop_upp = prop_upp * 100) |>
+  knitr::kable()
+```
+
+Prevalencia de intento suicida (no temporalidad) por discapacidad visual
+```{r}
+diseno_ensanut |>
+  group_by(disc_visual_severa, suicide_int) |>
+  summarise(prop = survey_mean(vartype = c("ci"))) |>
+  mutate(prop = prop * 100, 
+         prop_low = prop_low * 100, 
+         prop_upp = prop_upp * 100) |>
+  knitr::kable()
+```
+
+Razon de prevalencias cruda de intento suicida (sin temporalidad) | discapacidad visual severa
+```{r}
+svyglm(suicide_int_num ~ disc_visual_severa, 
+       design = diseno_ensanut, family = "quasipoisson") |>
+  broom::tidy(conf.int = T, exponentiate = T) |>
+  select(!c(std.error, statistic)) |>
+  knitr::kable()
+```
+
+Razon de prevalencias ajustada por edad, educacion, sexo, ses
+```{r}
+svyglm(suicide_int_num ~ disc_visual_severa + sexo + age_cat + education + ses, 
+       design = diseno_ensanut, family = "quasipoisson") |>
+  broom::tidy(conf.int = T, exponentiate = T) |>
+  select(!c(std.error, statistic)) |>
+  knitr::kable()
+```
+
+### Intento suicida en el ano pasado
+
+Prevalencia de intento suicida en el ano pasado
+```{r}
+diseno_ensanut |>
+  group_by(suicide_int_py_r) |>
+  summarise(prop = survey_mean(vartype = c("ci"))) |>
+  mutate(prop = prop * 100, 
+         prop_low = prop_low * 100, 
+         prop_upp = prop_upp * 100) |>
+  knitr::kable()
+```
+
+Prevalencia de intento suicida en ano pasado por discapacidad visual
+```{r}
+diseno_ensanut |>
+  group_by(disc_visual_severa, suicide_int_py_r) |>
+  summarise(prop = survey_mean(vartype = c("ci"))) |>
+  mutate(prop = prop * 100, 
+         prop_low = prop_low * 100, 
+         prop_upp = prop_upp * 100) |>
+  knitr::kable()
+```
+
+Razon de prevalencias cruda de intento suicida en el ano pasado | discapacidad visual severa
+```{r}
+svyglm(suicide_int_py_r_num ~ disc_visual_severa, 
+       design = diseno_ensanut, family = "quasipoisson") |>
+  broom::tidy(conf.int = T, exponentiate = T) |>
+  knitr::kable()
+```
+
+Razon de prevalencias ajustada por sexo, educacion, edad, y ses
+```{r}
+svyglm(suicide_int_py_r_num ~ disc_visual_severa + sexo + education + age_cat + ses, 
+       design = diseno_ensanut, family = "quasipoisson") |>
+  broom::tidy(conf.int = T, exponentiate = T) |>
+  knitr::kable()
+```
+

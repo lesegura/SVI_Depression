@@ -67,15 +67,31 @@ ensanut18_4analysis <- ensanut18_all |>
                                       nivel > 4 ~ 1), 
                             labels = c("More than high school education", 
                                        "High school education","Secondary school", 
-                                       "Elementary education or lower"))) 
+                                       "Elementary education or lower")), 
+         suicide_int = factor(ifelse(p12_8 == 3, 0, 1), labels = c("No", "Si")), 
+         suicide_int_py = factor(ifelse(p12_8_1 == 1, 1, 
+                                 ifelse(p12_8_1 == 2, 0, NA)), labels = c("No", "Si")), 
+         suicide_int_py_r = factor(case_when(suicide_int == "No" ~ 0, 
+                                             suicide_int == "Si" & p12_8_1 == 2 ~ 0, 
+                                             p12_8_1 == 1 ~ 1, 
+                                             suicide_int == "Si" & is.na(p12_8_1) ~ NA), labels = c("No", "Si")), 
+         cesd_num = ifelse(cesd == "Depressive symptoms", 1, 
+                           ifelse(cesd == "No depressive symptoms", 0, NA)), 
+         suicide_int_py_r_num = ifelse(suicide_int_py_r == "No", 0, 
+                                     ifelse(suicide_int_py_r == "Si", 1, NA)), 
+         suicide_int_num = ifelse(suicide_int == "No", 0, 1), 
+         suicide_ideation_num = ifelse(p12_7 == 8, NA, 
+                                   ifelse(p12_7 == 2, 0, p12_7)), 
+         suicide_ideation = factor(suicide_ideation_num, labels = c("No", "Si")))
+
 
 ensanut18_4analysis <- ensanut18_4analysis |>
   select(upm:ent, region, est_dis:f_20mas, age_cat, sexo, urbanicity, education, ses,
          insurance, l_indigena, work_pwk, usa_lentes, disc_visual, disc_visual_severa, 
-         disc_visual_severa_num, cesd_score, cesd)
+         disc_visual_severa_num, cesd_score, cesd, suicide_int, suicide_int_py, suicide_int_py_r, 
+         suicide_int_py_r_num, suicide_int_num, suicide_ideation, suicide_ideation_num)
 
 
 save(ensanut18_4analysis, file = here("data/", "ensanut18_4analysis.RData"))
-
-
+ 
 ```
